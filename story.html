@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Inside the Vibration</title>
+<meta name="description" content="The CWRU bearing dataset behind Bearing Collective, explained in pictures.">
+<meta name="theme-color" content="#f8f9fb">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M4 32h10l5-14 8 30 7-24 6 16 4-8h16' fill='none' stroke='%231f4fd8' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#f8f9fb;--card:#fff;--soft:#eff2f7;--ink:#0b1220;--muted:#5d6678;--faint:#9aa3b4;--line:#e6e9f0;
+  --blue:#1f4fd8;--n:#10a37f;--ir:#1f4fd8;--or:#e07b24;--ball:#0b1220;--amber:#e07b24;
+  --dur:12s;--serif:"Instrument Serif",Georgia,serif;--ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit}a{color:inherit}
+#bg{position:fixed;inset:0;z-index:0;width:100%;height:100%}
+
+#stage{position:fixed;inset:0;z-index:2;cursor:pointer;user-select:none;-webkit-user-select:none}
+.slide{position:absolute;inset:0;opacity:0;visibility:hidden;transform:translateX(90px);transition:opacity .8s,transform 1s var(--ease),visibility 0s 1s}
+.slide.past{transform:translateX(-90px)}
+.slide.active{opacity:1;visibility:visible;transform:none;transition:opacity .8s,transform 1s var(--ease),visibility 0s}
+.content{position:absolute;left:max(6vw,24px);top:50%;transform:translateY(-50%);width:min(400px,32vw)}
+.vis{position:absolute;right:max(5vw,24px);top:50%;transform:translateY(-50%);width:min(760px,54vw);padding:30px 32px;background:var(--card);border-radius:28px;
+  box-shadow:0 1px 2px rgba(11,18,32,.04),0 30px 80px -20px rgba(11,18,32,.14)}
+.vis.bare{background:transparent;box-shadow:none;padding:0}
+@media (max-width:820px){
+  .content{left:22px;right:22px;width:auto;top:auto;bottom:calc(90px + env(safe-area-inset-bottom));transform:none}
+  .vis{left:14px;right:14px;width:auto;top:calc(40px + env(safe-area-inset-top));transform:none;padding:16px;border-radius:20px}
+}
+.r,.title .w{opacity:0}
+.slide.active .r{animation:slidein .9s var(--ease) both;animation-delay:calc(.25s + var(--d,0)*.12s)}
+.title .w{display:inline-block;margin-right:.2em}
+.slide.active .title .w{animation:slidein 1s var(--ease) both;animation-delay:calc(.35s + var(--i)*.08s)}
+.slide.active .vis{animation:visin 1.2s var(--ease) .3s both}
+@keyframes slidein{from{opacity:0;transform:translateX(40px);filter:blur(6px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes visin{from{opacity:0;translate:120px 0}to{opacity:1;translate:0 0}}
+
+.thumb{width:64px;height:64px;border-radius:50%;overflow:hidden;margin-bottom:22px;box-shadow:0 14px 34px rgba(31,79,216,.18)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.ch{font-size:11px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--faint)}
+.ch b{color:var(--blue);font-weight:700}
+.title{font-family:var(--serif);font-weight:400;font-size:clamp(40px,5.2vw,82px);line-height:.98;letter-spacing:-.015em;margin:14px 0 14px}
+.title .acc{font-style:italic;color:var(--blue)}
+.line{font-size:clamp(15px,1.25vw,17px);color:var(--muted);margin:0 0 22px;line-height:1.5}
+.stat b{display:block;font-family:var(--serif);font-weight:400;font-size:clamp(44px,4.6vw,68px);line-height:1;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--faint)}
+@media (max-width:820px){.thumb{display:none}.title{font-size:clamp(36px,10vw,52px);margin:8px 0}.line{margin-bottom:12px}.stat b{font-size:40px}}
+
+.cover .content{width:min(620px,calc(100% - 48px))}
+.cover .title{font-size:clamp(58px,9vw,140px)}
+.watch{position:relative;display:inline-flex;align-items:center;gap:12px;padding:17px 28px;border-radius:999px;border:0;cursor:pointer;font-weight:600;font-size:16px;color:#fff;background:var(--ink);box-shadow:0 18px 44px rgba(11,18,32,.22)}
+.watch::before{content:"";position:absolute;inset:-6px;border-radius:999px;border:2px solid rgba(31,79,216,.3);animation:ring 2s infinite}
+@keyframes ring{0%{transform:scale(.96);opacity:1}100%{transform:scale(1.12);opacity:0}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.chips>*{padding:10px 15px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:13px;font-weight:600;text-decoration:none}
+.chips a:hover{border-color:var(--blue);color:var(--blue)}
+.cta{padding:12px 20px;border-radius:999px;border:0;background:var(--blue);color:#fff;font-weight:600;cursor:pointer}
+
+/* visuals */
+svg.v{width:100%;height:auto;display:block;overflow:visible}
+.ax{font:11px Inter,sans-serif;fill:var(--faint)}
+.lb{font:600 12px Inter,sans-serif;fill:var(--ink)}
+.key{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;font-size:12px;color:var(--muted)}
+.key span{display:flex;align-items:center;gap:7px}.key i{width:10px;height:10px;border-radius:3px}
+.draw{stroke-dasharray:var(--L);stroke-dashoffset:var(--L)}
+.slide.active .draw{animation:draw 2.2s cubic-bezier(.3,.7,.2,1) both;animation-delay:calc(.7s + var(--k,0)*.18s)}
+@keyframes draw{to{stroke-dashoffset:0}}
+.pop{opacity:0}
+.slide.active .pop{animation:pop .5s var(--ease) both;animation-delay:calc(.6s + var(--k,0)*.05s)}
+@keyframes pop{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+.grow{transform-box:fill-box;transform-origin:left center;transform:scaleX(0)}
+.slide.active .grow{animation:grow 1.3s var(--ease) both;animation-delay:calc(.7s + var(--k,0)*.15s)}
+@keyframes grow{to{transform:scaleX(1)}}
+.spin{transform-box:view-box}
+.slide.active .slide-win{animation:slidewin 6s steps(10) .8s infinite}
+
+/* HUD */
+.bars{position:fixed;z-index:3;top:calc(12px + env(safe-area-inset-top));left:16px;right:16px;display:flex;gap:5px}
+.seg{flex:1;height:3px;border-radius:3px;background:rgba(11,18,32,.1);overflow:hidden}
+.seg i{display:block;height:100%;width:0;background:var(--ink)}
+.seg.done i{width:100%}
+.seg.cur i{animation:fill var(--dur) linear forwards}
+body.paused .seg.cur i{animation-play-state:paused}
+@keyframes fill{to{width:100%}}
+.hud{position:fixed;z-index:3;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:8px;align-items:center;padding:6px;border-radius:999px;
+  background:rgba(255,255,255,.85);border:1px solid var(--line);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 12px 34px rgba(11,18,32,.08);transition:opacity .6s}
+.hud button{width:42px;height:42px;border-radius:50%;border:0;background:transparent;font-size:18px;cursor:pointer;color:var(--ink)}
+.hud button:hover{background:var(--soft)}
+.hud #pp{background:var(--ink);color:#fff;font-size:14px}
+.hud .count{white-space:nowrap;font-size:12px;font-weight:600;color:var(--muted);padding:0 10px 0 4px;font-variant-numeric:tabular-nums}
+body.cover .hud{opacity:0;pointer-events:none}
+.credit{position:fixed;z-index:3;right:12px;bottom:6px;font-size:10px;color:var(--faint)}
+.credit a{text-decoration:none}
+@media (prefers-reduced-motion:reduce){.slide.active .r,.slide.active .title .w,.slide.active .vis,.slide.active .draw,.slide.active .pop,.slide.active .grow{animation-duration:.01s;animation-delay:0s}.watch::before{animation:none}}
+</style>
+</head>
+<body class="cover paused">
+<canvas id="bg"></canvas>
+<div id="stage"></div>
+<div class="bars" id="bars"></div>
+<div class="hud"><button id="prev" aria-label="Previous">‹</button><button id="pp" aria-label="Play or pause">▶</button><button id="next" aria-label="Next">›</button><span class="count" id="count"></span></div>
+<div class="credit">Data: <a href="https://engineering.case.edu/bearingdatacenter" target="_blank" rel="noopener">Case Western Reserve University Bearing Data Center</a></div>
+
+<script src="data.js"></script>
+<script>
+const DS = window.DS, $ = s => document.querySelector(s);
+const CL = ['Normal', 'Inner Race', 'Outer Race', 'Ball'];
+const CC = { 'Normal': 'var(--n)', 'Inner Race': 'var(--ir)', 'Outer Race': 'var(--or)', 'Ball': 'var(--ball)' };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const key = items => `<div class="key">${items.map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join('')}</div>`;
+
+/* path helper: series → SVG path in box */
+function path(ys, x0, y0, w, h, lo, hi) {
+  lo ??= Math.min(...ys); hi ??= Math.max(...ys);
+  return ys.map((v, i) => (i ? 'L' : 'M') + (x0 + i / (ys.length - 1) * w).toFixed(1) + ',' + (y0 + h - (v - lo) / (hi - lo || 1) * h).toFixed(1)).join('');
+}
+const dline = (d, c, w = 1.6, k = 0, extra = '') => `<path class="draw" pathLength="1000" style="--L:1000;--k:${k}" d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round" ${extra}/>`;
+
+/* ---------- visuals (all drawn from real data where data exists) ---------- */
+const V = {};
+
+V.rig = () => {
+  let s = `<svg class="v" viewBox="0 0 720 330">
+  <rect x="20" y="262" width="680" height="16" rx="8" fill="var(--soft)"/>
+  <!-- motor -->
+  <g class="pop" style="--k:0"><rect x="40" y="110" width="230" height="150" rx="26" fill="#e8edf8" stroke="#c9d3ea"/>
+    ${Array.from({ length: 9 }, (_, i) => `<line x1="${70 + i * 20}" y1="122" x2="${70 + i * 20}" y2="248" stroke="#c9d3ea" stroke-width="3"/>`).join('')}
+    <rect x="40" y="100" width="40" height="170" rx="12" fill="#d7dff2"/><rect x="232" y="100" width="40" height="170" rx="12" fill="#d7dff2"/>
+    <text class="lb" x="155" y="300" text-anchor="middle">2 HP motor</text></g>
+  <!-- shaft -->
+  <rect x="272" y="178" width="300" height="14" rx="7" fill="#c3cad8"/>
+  <line x1="272" y1="185" x2="572" y2="185" stroke="#fff" stroke-width="3" stroke-dasharray="6 14"><animate attributeName="stroke-dashoffset" from="0" to="-40" dur=".5s" repeatCount="indefinite"/></line>
+  <!-- torque transducer -->
+  <g class="pop" style="--k:3"><rect x="372" y="150" width="70" height="70" rx="16" fill="#fff" stroke="#c9d3ea"/><text class="lb" x="407" y="300" text-anchor="middle">torque sensor</text></g>
+  <!-- dynamometer -->
+  <g class="pop" style="--k:6"><rect x="572" y="120" width="120" height="140" rx="24" fill="#eef1f6" stroke="#d3d9e4"/><text class="lb" x="632" y="300" text-anchor="middle">dynamometer · load</text></g>
+  <!-- accelerometers -->
+  <g class="pop" style="--k:9"><circle cx="252" cy="92" r="11" fill="var(--blue)"/><circle cx="252" cy="92" r="11" fill="none" stroke="var(--blue)" stroke-width="2"><animate attributeName="r" from="11" to="26" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" from=".7" to="0" dur="1.6s" repeatCount="indefinite"/></circle>
+    <text x="252" y="58" text-anchor="middle" font-family="Inter" font-size="13" font-weight="700" fill="var(--blue)">drive-end sensor</text>
+    <circle cx="60" cy="92" r="8" fill="#c3cad8"/><text class="ax" x="60" y="66" text-anchor="middle">fan end</text></g>
+  </svg>`;
+  return s + `<div class="key"><span><i style="background:var(--blue)"></i>the only channel used here</span><span>12 kHz · 0–3 HP load</span></div>`;
+};
+
+function bearingSVG({ size = 360, faults = false, spin = true }) {
+  const c = size / 2, ro = c * .96, ri = c * .74, ii = c * .5, ib = c * .3, pr = (ri + ii) / 2, br = (ri - ii) * .42;
+  let s = `<g>`;
+  s += `<circle cx="${c}" cy="${c}" r="${ro}" fill="#e9edf5"/><circle cx="${c}" cy="${c}" r="${ri}" fill="#fff"/>`;
+  s += `<circle cx="${c}" cy="${c}" r="${ii}" fill="#e3e8f2"/><circle cx="${c}" cy="${c}" r="${ib}" fill="var(--bg)" stroke="#d6dce8"/>`;
+  s += `<g>${spin ? `<animateTransform attributeName="transform" type="rotate" from="0 ${c} ${c}" to="40 ${c} ${c}" dur="6s" repeatCount="indefinite"/>` : ''}<circle cx="${c}" cy="${c}" r="${pr}" fill="none" stroke="#c9d3ea" stroke-width="3"/>`;
+  for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 - Math.PI / 2; s += `<circle cx="${c + Math.cos(a) * pr}" cy="${c + Math.sin(a) * pr}" r="${br}" fill="#cfd6e3" stroke="#b5bfd0"/>`; }
+  if (faults) s += `<circle cx="${c}" cy="${c - pr}" r="${br * .32}" fill="var(--ball)"/>`;
+  s += `</g>`;
+  if (faults) {
+    s += `<circle cx="${c}" cy="${c + ri - 2}" r="7" fill="var(--or)"/><circle cx="${c + ii - 2}" cy="${c}" r="7" fill="var(--ir)"/>`;
+  }
+  return s + `</g>`;
+}
+V.bearing = () => `<svg class="v" viewBox="0 0 720 380"><g transform="translate(20,10)">${bearingSVG({ size: 360 })}</g>
+  ${[['outer ring', 80], ['ball × 9', 150], ['inner ring', 220], ['bore · 25 mm', 290]].map(([t, y], i) => `<g class="pop" style="--k:${i * 2}"><line x1="${[372, 300, 300, 260][i]}" y1="${y}" x2="460" y2="${y}" stroke="var(--line)" stroke-width="1.5"/><text class="lb" x="472" y="${y + 4}">${t}</text></g>`).join('')}
+  <g class="pop" style="--k:9"><text x="472" y="350" font-family="Instrument Serif" font-size="30" fill="var(--ink)">SKF 6205-2RS</text></g></svg>`;
+
+V.damage = () => {
+  const sizes = [[.007, .18], [.014, .36], [.021, .53]], px = 260; // px per mm
+  let s = `<svg class="v" viewBox="0 0 720 360"><g transform="translate(10,20)">${bearingSVG({ size: 300, faults: true, spin: false })}</g>`;
+  s += `<g transform="translate(360,60)"><text class="ax" x="0" y="0">pit diameter, to scale</text>`;
+  sizes.forEach(([inch, mm], i) => {
+    const r = mm * px / 2, cx = 30 + [0, 80, 190][i] + r;
+    s += `<g class="pop" style="--k:${2 + i * 2}"><circle cx="${cx}" cy="120" r="${r}" fill="${i === 2 ? 'var(--amber)' : 'var(--ink)'}"/><text class="lb" x="${cx}" y="${150 + 70}" text-anchor="middle">${mm} mm</text><text class="ax" x="${cx}" y="${150 + 88}" text-anchor="middle">${inch}″</text></g>`;
+  });
+  s += `<g class="pop" style="--k:9"><rect x="0" y="250" width="${.07 * px}" height="40" rx="3" fill="#c9d3ea"/><text class="ax" x="${.07 * px + 10}" y="275">a human hair ≈ 0.07 mm</text></g></g></svg>`;
+  return s + key([['inner race', 'var(--ir)'], ['outer race · 6 o’clock', 'var(--or)'], ['ball', 'var(--ball)'], ['largest size kept for testing', 'var(--amber)']]);
+};
+
+V.grid = () => {
+  const rows = [['Normal', null], ['Inner Race', .007], ['Inner Race', .014], ['Inner Race', .021], ['Outer Race', .007], ['Outer Race', .014], ['Outer Race', .021], ['Ball', .007], ['Ball', .014], ['Ball', .021]];
+  const W = 720, x0 = 128, cw = (W - x0) / 4, ch = 31;
+  let s = `<svg class="v" viewBox="0 0 ${W} ${30 + rows.length * ch}">`;
+  [0, 1, 2, 3].forEach(l => s += `<text class="ax" x="${x0 + l * cw + cw / 2}" y="16" text-anchor="middle">${l} HP</text>`);
+  rows.forEach(([cls, dia], ri) => {
+    const y = 26 + ri * ch;
+    s += `<text class="ax" x="0" y="${y + 19}">${cls === 'Normal' ? 'Normal' : cls.split(' ')[0] + ' ' + String(dia).slice(1) + '″'}</text>`;
+    [0, 1, 2, 3].forEach(l => {
+      const f = DS.files.find(f => f.load === l && CL[f.cls] === cls && (dia === null ? f.dia === null : Math.abs(f.dia - dia) < 1e-6));
+      const held = dia === .021;
+      s += `<g class="pop" style="--k:${l * 3 + ri * .3}"><rect x="${x0 + l * cw + 4}" y="${y}" width="${cw - 8}" height="${ch - 6}" rx="7" fill="${CC[cls]}" opacity="${held ? .22 : .9}" ${held ? 'stroke="var(--amber)" stroke-width="2"' : ''}/>
+        <text x="${x0 + l * cw + cw / 2}" y="${y + 17}" text-anchor="middle" font-family="Inter" font-size="11.5" font-weight="600" fill="${held ? 'var(--ink)' : '#fff'}">${f ? f.id + '.mat' : ''}</text></g>`;
+    });
+  });
+  return s + `</svg>` + key([['Normal', 'var(--n)'], ['Inner race', 'var(--ir)'], ['Outer race', 'var(--or)'], ['Ball', 'var(--ball)'], ['.021″ · held back', 'rgba(224,123,36,.3)']]);
+};
+
+V.speed = () => {
+  const byLoad = [0, 1, 2, 3].map(l => { const r = DS.files.filter(f => f.load === l && f.rpm).map(f => f.rpm).sort((a, b) => a - b); return r[Math.floor(r.length / 2)]; });
+  const plants = ['A', 'B', 'C + E', 'D'];
+  let s = `<svg class="v" viewBox="0 0 720 300">`;
+  byLoad.forEach((rpm, l) => {
+    const y = 20 + l * 66, w = (rpm - 1650) / (1800 - 1650) * 470;
+    s += `<text class="lb" x="0" y="${y + 24}">${l} HP</text><text class="ax" x="0" y="${y + 42}">plant ${plants[l]}</text>
+      <rect class="grow" style="--k:${l}" x="90" y="${y + 6}" width="${w}" height="34" rx="17" fill="var(--blue)" opacity="${1 - l * .18}"/>
+      <text class="pop" style="--k:${8 + l * 2}" x="${100 + w}" y="${y + 29}" font-family="Instrument Serif" font-size="26" fill="var(--ink)">${rpm} rpm</text>`;
+  });
+  return s + `<text class="ax" x="90" y="292">more load → slightly slower shaft · axis starts at 1,650 rpm</text></svg>`;
+};
+
+V.signals = () => {
+  let s = `<svg class="v" viewBox="0 0 720 360">`;
+  CL.forEach((c, i) => {
+    const y = 10 + i * 88, ys = DS.sig[c];
+    s += `<text class="lb" x="0" y="${y + 14}" fill="${CC[c]}">${c}</text>`;
+    s += dline(path(ys, 0, y + 22, 720, 56, -2.2, 2.2), CC[c], 1.3, i);
+  });
+  return s + `</svg><div class="key"><span>0.1 s of each recording · 0 HP · same vertical scale</span></div>`;
+};
+
+V.spectrum = () => {
+  let s = `<svg class="v" viewBox="0 0 720 300">`;
+  const lo = Math.min(...CL.flatMap(c => DS.spec[c])), hi = Math.max(...CL.flatMap(c => DS.spec[c]));
+  [0, 2, 4, 6].forEach(k => s += `<text class="ax" x="${k / 6 * 700 + 10}" y="296" text-anchor="middle">${k} kHz</text>`);
+  CL.forEach((c, i) => s += dline(path(DS.spec[c], 10, 10, 700, 260, lo, hi), CC[c], 2, i));
+  return s + `</svg>` + key(CL.map(c => [c, CC[c]]));
+};
+
+V.envelope = () => {
+  const F = DS.fault_hz, panels = [['Inner Race', 'BPFI', F.BPFI], ['Outer Race', 'BPFO', F.BPFO], ['Ball', 'BSF', F.BSF]];
+  let s = `<svg class="v" viewBox="0 0 720 360">`;
+  panels.forEach(([c, n, hz], i) => {
+    const y = 8 + i * 116, e = DS.env[c];
+    const keepI = e.f.map((f, k) => f >= 20 ? k : -1).filter(k => k >= 0);
+    const ys = keepI.map(k => e.p[k]);
+    const X = f => 70 + (f - 20) / (500 - 20) * 640;
+    [1, 2].forEach(m => { if (hz * m < 500) s += `<line x1="${X(hz * m)}" x2="${X(hz * m)}" y1="${y}" y2="${y + 92}" stroke="${CC[c]}" stroke-width="1.5" stroke-dasharray="3 4" opacity=".55"/>`; });
+    s += `<text class="lb" x="0" y="${y + 18}" fill="${CC[c]}">${c.split(' ')[0]}</text><text class="ax" x="0" y="${y + 34}">${n} ${hz.toFixed(0)} Hz</text>`;
+    s += dline(path(ys, 70, y, 640, 92, 0, 1), CC[c], 1.6, i);
+  });
+  [20, 100, 200, 300, 400, 500].forEach(f => s += `<text class="ax" x="${70 + (f - 20) / 480 * 640}" y="356" text-anchor="middle">${f} Hz</text>`);
+  return s + `</svg><div class="key"><span>dashed = where theory says the peak should be (and its 2nd harmonic)</span></div>`;
+};
+
+V.severity = () => {
+  const keys = ['0.007', '0.014', '0.021'], mm = ['0.18 mm', '0.36 mm', '0.53 mm'];
+  const maxR = Math.max(...keys.map(k => DS.sev[k].rms));
+  let s = `<svg class="v" viewBox="0 0 720 330">`;
+  keys.forEach((k, i) => {
+    const y = 6 + i * 104;
+    s += `<text class="lb" x="0" y="${y + 18}">${mm[i]}</text>`;
+    s += dline(path(DS.sev[k].sig, 90, y, 430, 84, -3, 3), i === 2 ? 'var(--amber)' : 'var(--ir)', 1.2, i);
+    const w = DS.sev[k].rms / maxR * 150;
+    s += `<rect class="grow" style="--k:${i + 4}" x="550" y="${y + 30}" width="${w}" height="24" rx="12" fill="${i === 2 ? 'var(--amber)' : 'var(--ir)'}"/><text class="ax" x="550" y="${y + 74}">RMS ${DS.sev[k].rms.toFixed(2)}</text>`;
+  });
+  return s + `</svg><div class="key"><span>inner-race fault · 0 HP · same scale</span></div>`;
+};
+
+V.windows = () => {
+  const ys = DS.win_demo, n = ys.length, W = 720;           // 1.02 s shown, decimated ×4
+  const winPx = 2048 / 4 / n * W, hopPx = winPx / 2;
+  let s = `<svg class="v" viewBox="0 0 ${W} 250">${dline(path(ys, 0, 40, W, 130), 'var(--ir)', 1, 0)}`;
+  s += `<g class="slide-win" style="--hop:${hopPx}px">`;
+  for (let k = 0; k < 2; k++) s += `<rect x="${k * hopPx}" y="22" width="${winPx}" height="166" rx="10" fill="rgba(31,79,216,${k ? .05 : .09})" stroke="var(--blue)" stroke-width="${k ? 1 : 2}" ${k ? 'stroke-dasharray="5 5"' : ''}/>`;
+  s += `<animateTransform attributeName="transform" type="translate" values="${Array.from({ length: 11 }, (_, i) => `${Math.min(i, 10) * hopPx} 0`).join(';')}" dur="7s" calcMode="discrete" repeatCount="indefinite"/></g>`;
+  s += `<text class="lb" x="0" y="222">2,048 samples · 0.17 s per window</text><text class="ax" x="${W}" y="222" text-anchor="end">next window starts halfway · 50% overlap</text></svg>`;
+  return s;
+};
+
+V.split = () => {
+  const W = 720, segs = [['train', .55, 'var(--blue)'], ['validation', .20, '#7d94ee'], ['test', .25, 'var(--ink)']];
+  let s = `<svg class="v" viewBox="0 0 ${W} 300"><text class="ax" x="0" y="14">one recording, start → end</text>`;
+  let x = 0;
+  segs.forEach(([n, f, c], i) => {
+    const w = f * W - (i ? 10 : 0);
+    if (i) { s += `<g class="pop" style="--k:${i * 4}"><line x1="${x + 2}" x2="${x + 2}" y1="26" y2="88" stroke="var(--amber)" stroke-width="2" stroke-dasharray="3 3"/></g>`; x += 10; }
+    s += `<rect class="grow" style="--k:${i * 2}" x="${x}" y="30" width="${w}" height="54" rx="14" fill="${c}"/><text class="pop" style="--k:${i * 3 + 3}" x="${x + 14}" y="62" font-family="Inter" font-size="13" font-weight="700" fill="#fff">${n} ${Math.round(f * 100)}%</text>`;
+    x += w;
+  });
+  s += `<text class="ax" x="0" y="112" fill="var(--amber)">amber = 2,048-sample gap, so no window crosses a boundary</text>`;
+  s += `<text class="ax" x="0" y="168">at 2 HP the recording is first cut between plants C and E</text>`;
+  s += `<rect class="grow" style="--k:7" x="0" y="182" width="${.6 * W - 6}" height="46" rx="12" fill="#e8edf8"/><text class="pop" style="--k:10" x="14" y="211" font-family="Inter" font-size="13" font-weight="700">plant C · first 60%</text>`;
+  s += `<rect class="grow" style="--k:8" x="${.6 * W + 6}" y="182" width="${.4 * W - 6}" height="46" rx="12" fill="#eef1f6"/><text class="pop" style="--k:11" x="${.6 * W + 20}" y="211" font-family="Inter" font-size="13" font-weight="700">plant E · last 40%</text>`;
+  return s + `</svg>`;
+};
+
+V.features = () => {
+  const W = 720, x0 = 96, cw = (W - x0) / 100, rh = 46;
+  const cols = Array.from({ length: 100 }, (_, j) => CL.map(c => DS.feats[c][j]));
+  let s = `<svg class="v" viewBox="0 0 ${W} ${40 + 4 * (rh + 10)}">`;
+  [[0, 64, '64 spectrum bands'], [64, 96, '32 envelope bands'], [96, 100, '4 stats']].forEach(([a, b, t]) => s += `<text class="ax" x="${x0 + a * cw}" y="14">${t}</text><line x1="${x0 + a * cw}" x2="${x0 + b * cw - 3}" y1="22" y2="22" stroke="var(--line)" stroke-width="2"/>`);
+  CL.forEach((c, i) => {
+    const y = 32 + i * (rh + 10);
+    s += `<text class="lb" x="0" y="${y + 28}" fill="${CC[c]}">${c}</text>`;
+    DS.feats[c].forEach((v, j) => {
+      const col = cols[j], lo = Math.min(...col), hi = Math.max(...col), t = (v - lo) / (hi - lo || 1);
+      s += `<rect class="pop" style="--k:${j * .08 + i * .4}" x="${x0 + j * cw}" y="${y}" width="${cw + .3}" height="${rh}" fill="var(--blue)" fill-opacity="${(.06 + .94 * t).toFixed(2)}"/>`;
+    });
+  });
+  return s + `</svg><div class="key"><span>each window becomes 100 numbers · darker = higher, compared across the four classes</span></div>`;
+};
+
+V.limits = () => {
+  const L = [['One rig', 'one motor, one lab'], ['Seeded damage', 'machined pits, not natural wear'], ['Short clips', '≈10 s per recording'], ['Ball faults are faint', 'no clean envelope peak']];
+  return `<svg class="v" viewBox="0 0 720 300">${L.map(([b, t], i) => { const x = (i % 2) * 366, y = Math.floor(i / 2) * 150; return `<g class="pop" style="--k:${i * 2}"><rect x="${x}" y="${y}" width="354" height="136" rx="22" fill="var(--soft)"/><text x="${x + 26}" y="${y + 62}" font-family="Instrument Serif" font-size="34" fill="var(--ink)">${b}</text><text class="ax" x="${x + 26}" y="${y + 92}" style="font-size:13px">${t}</text></g>`; }).join('')}</svg>`;
+};
+
+/* ---------- story ---------- */
+const totalSec = DS.files.reduce((a, f) => a + f.sec, 0), totalMB = DS.files.reduce((a, f) => a + f.mb, 0);
+const S = [
+  { type: 'cover' },
+  { ch: 'The rig', img: 'img/05_lab.jpg', title: 'One motor, one sensor', line: 'A lab test stand at Case Western Reserve University.', vis: 'rig', stat: ['12,000', 'readings per second'] },
+  { ch: 'The bearing', img: 'img/03_bearing.jpg', title: 'Nine balls between two rings', line: 'The drive-end bearing carries the shaft.', vis: 'bearing', stat: ['25 mm', 'bore'] },
+  { ch: 'The damage', img: 'img/06_damage.jpg', title: 'Tiny pits, made on purpose', line: 'Spark-machined into one part at a time.', vis: 'damage', stat: ['0.18–0.53', 'mm wide'] },
+  { ch: 'The files', title: 'Forty recordings', line: 'Ten conditions, four loads.', vis: 'grid', stat: [Math.round(totalMB) + ' MB', `about ${Math.round(totalSec / 60)} minutes of vibration`] },
+  { ch: 'The load', title: 'Heavier load, slower spin', line: 'Each load becomes one virtual plant.', vis: 'speed', stat: ['0–3 HP', 'four loads'] },
+  { ch: 'The sound', img: 'img/08_sensor.jpg', title: 'Each fault shakes differently', line: 'Raw vibration, a tenth of a second.', vis: 'signals', stat: ['0.1 s', 'shown per class'] },
+  { ch: 'The spectrum', title: 'Where the energy sits', line: 'Faults push energy into higher frequencies.', vis: 'spectrum', stat: ['0–6 kHz', 'frequency range'] },
+  { ch: 'The fingerprint', title: 'Physics predicts the beat', line: 'Each impact repeats at a rate set by geometry.', vis: 'envelope', stat: [DS.fault_hz.BPFI.toFixed(0) + ' Hz', 'inner race, predicted · found ' + (() => { const e = DS.env['Inner Race']; let b = 0, bi = 0; e.f.forEach((f, i) => { if (f > 50 && f < 400 && e.p[i] > b) { b = e.p[i]; bi = i; } }); return e.f[bi].toFixed(0); })() + ' Hz'] },
+  { ch: 'The surprise', title: 'Bigger is not louder', line: 'The middle pit vibrates least.', vis: 'severity', stat: [DS.sev['0.014'].rms.toFixed(2), 'RMS at 0.36 mm, the quietest'] },
+  { ch: 'The windows', title: 'Cut into short slices', line: 'The model sees one slice at a time.', vis: 'windows', stat: ['2,048', 'samples per slice'] },
+  { ch: 'The split', title: 'Past trains, future tests', line: 'Time blocks keep test slices unseen.', vis: 'split', stat: ['55 · 20 · 25', 'train · validation · test %'] },
+  { ch: 'The features', title: 'A hundred numbers each', line: 'What the model actually reads.', vis: 'features', stat: ['100', 'numbers per slice'] },
+  { ch: 'The limits', title: 'A clean lab, not a factory', line: 'Good for learning. Not proof of the field.', vis: 'limits', finale: true }
+];
+const LAST = S.length - 1;
+let cur = 0, playing = false;
+
+const titleHTML = t => { const w = t.split(' '); return w.map((x, i) => `<span class="w${i === w.length - 1 ? ' acc' : ''}" style="--i:${i}">${esc(x)}</span>`).join(''); };
+function build() {
+  S.forEach((s, i) => {
+    const el = document.createElement('section');
+    el.className = 'slide' + (s.type ? ' cover' : '');
+    if (s.type) el.innerHTML = `<div class="content"><div class="ch r" style="--d:1"><b>The dataset</b> behind Bearing Collective</div>
+        <h1 class="title">${titleHTML('Inside the vibration')}</h1>
+        <p class="line r" style="--d:4">Forty real recordings of healthy and damaged bearings.</p>
+        <button class="watch r" style="--d:5" id="watch">▶&nbsp; Watch</button></div>`;
+    else el.innerHTML = `<div class="content">${s.img ? `<div class="thumb r" style="--d:0"><img src="${s.img}" alt=""></div>` : ''}
+        <div class="ch r" style="--d:1"><b>${String(i).padStart(2, '0')}</b> · ${esc(s.ch)}</div>
+        <h2 class="title">${titleHTML(s.title)}</h2><p class="line r" style="--d:5">${esc(s.line)}</p>
+        ${s.stat ? `<div class="stat r" style="--d:6"><b>${esc(s.stat[0])}</b><span>${esc(s.stat[1])}</span></div>` : ''}
+        ${s.finale ? `<div class="chips r" style="--d:6"><a href="https://engineering.case.edu/bearingdatacenter" target="_blank" rel="noopener">CWRU data ↗</a><a href="https://qwertykeypadapple.github.io/bearing-collective/" target="_blank" rel="noopener">Bearing Collective ↗</a></div><button class="cta r" style="--d:7" data-replay>↺ Watch again</button>` : ''}</div>
+      <div class="vis">${V[s.vis]()}</div>`;
+    $('#stage').appendChild(el); s.el = el;
+    const seg = document.createElement('div'); seg.className = 'seg';
+    const f = document.createElement('i'); f.addEventListener('animationend', () => { if (i === cur && playing) next(); });
+    seg.appendChild(f); $('#bars').appendChild(seg); s.seg = seg;
+  });
+}
+
+/* ---------- background: real vibration flowing sideways ---------- */
+const cv = $('#bg'), cx = cv.getContext('2d');
+function sizeBg() { const d = devicePixelRatio || 1; cv.width = innerWidth * d; cv.height = innerHeight * d; cx.setTransform(d, 0, 0, d, 0, 0); }
+function bg(t) {
+  const W = innerWidth, H = innerHeight, cover = cur === 0;
+  cx.clearRect(0, 0, W, H);
+  const COLS = [[16, 163, 127], [31, 79, 216], [224, 123, 36], [11, 18, 32]];
+  const lines = cover ? CL.map((c, i) => [DS.sig[c], COLS[i]]) : [[DS.win_demo, COLS[1]]];
+  lines.forEach(([sig, col], i) => {
+    const n = sig.length, speed = cover ? 60 : 30, step = cover ? 3 : 1.2;
+    const y0 = cover ? H * (.22 + i * .17) : H * (W > 820 ? .86 : .52), amp = cover ? H * .045 : H * .03;
+    const off = (t / 1000 * speed) % n;
+    cx.beginPath();
+    for (let x = 0; x <= W; x += 2) { const k = Math.floor((x / step + off)) % n; const v = sig[k]; x ? cx.lineTo(x, y0 + v * amp / 2) : cx.moveTo(x, y0 + v * amp / 2); }
+    const fade = cover ? .28 : .1;
+    cx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${fade})`; cx.lineWidth = cover ? 1.4 : 1; cx.stroke();
+  });
+  if (cover && W > 820) {   // keep the headline clean: fade the lines out on the left
+    const g = cx.createLinearGradient(0, 0, W * .6, 0);
+    g.addColorStop(0, 'rgba(248,249,251,1)'); g.addColorStop(.65, 'rgba(248,249,251,.85)'); g.addColorStop(1, 'rgba(248,249,251,0)');
+    cx.fillStyle = g; cx.fillRect(0, 0, W * .6, H);
+  } else if (cover) {       // phone: text sits low, so fade the lines out towards the bottom
+    const g = cx.createLinearGradient(0, H * .4, 0, H * .62);
+    g.addColorStop(0, 'rgba(248,249,251,0)'); g.addColorStop(1, 'rgba(248,249,251,1)');
+    cx.fillStyle = g; cx.fillRect(0, H * .4, W, H * .6);
+  }
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) requestAnimationFrame(bg);
+}
+
+/* ---------- navigation ---------- */
+function setPlaying(v) { playing = v; document.body.classList.toggle('paused', !v); $('#pp').textContent = v ? '❚❚' : '▶'; }
+function go(i) {
+  i = Math.max(0, Math.min(LAST, i)); cur = i;
+  S.forEach((s, k) => { s.el.classList.toggle('active', k === i); s.el.classList.toggle('past', k < i); s.seg.className = 'seg' + (k < i ? ' done' : ''); });
+  void S[i].seg.offsetWidth; S[i].seg.classList.add('cur');
+  document.body.classList.toggle('cover', i === 0);
+  $('#count').textContent = String(i).padStart(2, '0') + ' / ' + String(LAST).padStart(2, '0');
+}
+const next = () => cur < LAST ? go(cur + 1) : setPlaying(false);
+const prev = () => { if (cur > 1) go(cur - 1); };
+const start = () => { setPlaying(true); go(1); };
+let sx = null, sy = 0;
+$('#stage').addEventListener('pointerdown', e => { if (e.target.closest('button,a')) { sx = null; return; } sx = e.clientX; sy = e.clientY; });
+$('#stage').addEventListener('pointerup', e => {
+  if (sx === null) return; const dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
+  if (cur === 0) return start();
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) return dx < 0 ? next() : prev();
+  if (Math.abs(dx) < 12 && Math.abs(dy) < 12) e.clientX < innerWidth * .3 ? prev() : next();
+});
+$('#stage').addEventListener('click', e => { if (e.target.closest('[data-replay],#watch')) start(); });
+$('#prev').onclick = prev; $('#next').onclick = () => cur === 0 ? start() : next(); $('#pp').onclick = () => cur === 0 ? start() : setPlaying(!playing);
+addEventListener('keydown', e => { if (e.key === 'ArrowRight') cur === 0 ? start() : next(); else if (e.key === 'ArrowLeft') prev(); else if (e.key === ' ') { e.preventDefault(); cur === 0 ? start() : setPlaying(!playing); } });
+let lock = 0;
+addEventListener('wheel', e => { const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY; if (Math.abs(d) < 30 || performance.now() < lock) return; lock = performance.now() + 900; d > 0 ? (cur === 0 ? start() : next()) : prev(); }, { passive: true });
+addEventListener('resize', sizeBg);
+
+build(); sizeBg(); go(0); requestAnimationFrame(bg);
+</script>
+</body>
+</html>

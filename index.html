@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ask the Vibration</title>
+<meta name="description" content="Ten common questions about bearing vibration data, answered by listening, guessing and dragging real CWRU recordings.">
+<meta name="theme-color" content="#f8f9fb">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M4 32h10l5-14 8 30 7-24 6 16 4-8h16' fill='none' stroke='%231f4fd8' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#f8f9fb;--card:#fff;--soft:#eff2f7;--soft2:#e6eaf2;--ink:#0b1220;--muted:#5d6678;--faint:#9aa3b4;--line:#e6e9f0;
+  --blue:#1f4fd8;--blue2:#7d94ee;--n:#10a37f;--ir:#1f4fd8;--or:#e07b24;--ball:#0b1220;--good:#10a37f;--bad:#e5484d;--amber:#e07b24;
+  --serif:"Instrument Serif",Georgia,serif;--ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+a{color:inherit}
+#bg{position:fixed;inset:0;z-index:0;width:100%;height:100%;pointer-events:none}
+
+/* ---------- frame ---------- */
+#stage{position:fixed;inset:0;z-index:2}
+.q{position:absolute;inset:0;display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:5vw;align-items:center;padding:90px 6vw 110px;
+  opacity:0;visibility:hidden;transform:translateX(100px);transition:opacity .7s,transform .9s var(--ease),visibility 0s .9s}
+.q.past{transform:translateX(-100px)}
+.q.active{opacity:1;visibility:visible;transform:none;transition:opacity .7s,transform .9s var(--ease),visibility 0s}
+@media (max-width:860px){
+  .q{display:block;overflow-y:auto;overflow-x:hidden;padding:64px 18px 120px;-webkit-overflow-scrolling:touch}
+  .q .right{margin-top:22px}
+}
+.num{font-size:11px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--faint)}
+.num b{color:var(--blue)}
+h2{font-family:var(--serif);font-weight:400;font-size:clamp(36px,4.3vw,64px);line-height:1;letter-spacing:-.01em;margin:14px 0 18px}
+h2 em{color:var(--blue)}
+.hint{font-size:14px;color:var(--muted);margin:0 0 18px;display:flex;align-items:center;gap:8px}
+.hint::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--blue);animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.25}}
+.q.answered .hint{display:none}
+
+.choices{display:flex;flex-wrap:wrap;gap:10px}
+.choice{padding:13px 18px;border-radius:14px;border:1.5px solid var(--line);background:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 1px 2px rgba(11,18,32,.04)}
+.choice:hover:not(:disabled){border-color:var(--blue);transform:translateY(-1px)}
+.choice:disabled{cursor:default}
+.choice.right{border-color:var(--good);background:#e8f7f2;color:#0b6b52}
+.choice.wrong{border-color:var(--bad);background:#fdeced;color:#a3272b}
+.choice.dim{opacity:.45}
+
+.answer{margin-top:22px;padding:20px 22px;border-radius:18px;background:#fff;border:1px solid var(--line);box-shadow:0 20px 50px -24px rgba(11,18,32,.25);
+  display:none;animation:ansin .7s var(--ease) both}
+.q.answered .answer{display:block}
+@keyframes ansin{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+.answer .verdict{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px}
+.answer .verdict.ok{color:var(--good)}.answer .verdict.no{color:var(--bad)}.answer .verdict.info{color:var(--blue)}
+.answer p{margin:0;font-size:15px;line-height:1.55;color:var(--muted)}
+.answer p b{color:var(--ink)}
+
+.panel{background:#fff;border-radius:26px;padding:26px;box-shadow:0 1px 2px rgba(11,18,32,.04),0 30px 80px -24px rgba(11,18,32,.16);position:relative}
+@media (max-width:860px){.panel{padding:16px;border-radius:20px}}
+.cap{font-size:12px;color:var(--faint);margin-top:12px}
+svg.v{width:100%;height:auto;display:block;overflow:visible}
+.ax{font:11px Inter,sans-serif;fill:var(--faint)}
+.lb{font:600 12px Inter,sans-serif;fill:var(--ink)}
+canvas.scope{width:100%;height:150px;display:block}
+
+/* play buttons */
+.players{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.play{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;border:1.5px solid var(--line);background:#fff;cursor:pointer;text-align:left;transition:all .2s}
+.play:hover{border-color:var(--blue)}
+.play i{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;font-style:normal;font-size:13px;flex:none}
+.play b{display:block;font-size:14px}.play span{font-size:12px;color:var(--faint)}
+.play.on{border-color:var(--ink);box-shadow:0 10px 24px -10px rgba(11,18,32,.3)}
+.play.heard::after{content:"✓";margin-left:auto;color:var(--good);font-weight:700}
+
+/* mystery cards */
+.myst{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mcard{border:2px solid var(--line);border-radius:18px;padding:12px 12px 8px;background:#fff;cursor:pointer;transition:all .2s;text-align:left}
+.mcard:hover:not(:disabled){border-color:var(--blue);transform:translateY(-2px)}
+.mcard .t{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--faint)}
+.mcard.right{border-color:var(--good);background:#f2fbf8}.mcard.wrong{border-color:var(--bad);background:#fff6f6}
+.mcard .reveal{color:var(--ink)}
+
+/* chips / toggles */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{padding:8px 14px;border-radius:999px;border:1.5px solid var(--line);background:#fff;font-size:13px;font-weight:600;cursor:pointer}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.readout{display:flex;gap:26px;flex-wrap:wrap;margin-top:12px}
+.readout div{font-size:12px;color:var(--faint)}
+.readout b{display:block;font-family:var(--serif);font-weight:400;font-size:38px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--blue);height:28px}
+.btn{padding:12px 20px;border-radius:999px;border:0;background:var(--ink);color:#fff;font-weight:600;cursor:pointer}
+.found{font-size:13px;font-weight:600;color:var(--muted)}
+
+/* top + bottom chrome */
+.top{position:fixed;z-index:3;top:calc(18px + env(safe-area-inset-top));left:6vw;right:6vw;display:flex;align-items:center;justify-content:space-between;gap:16px;transition:opacity .5s}
+.dots{display:flex;gap:6px}
+.dots i{width:22px;height:4px;border-radius:2px;background:var(--soft2);transition:all .4s}
+.dots i.done{background:var(--ink)}.dots i.cur{background:var(--blue);width:40px}
+.score{font-size:13px;font-weight:600;padding:7px 13px;border-radius:999px;background:#fff;border:1px solid var(--line)}
+.nav{position:fixed;z-index:3;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:8px;padding:6px;border-radius:999px;
+  background:rgba(255,255,255,.88);border:1px solid var(--line);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 12px 34px rgba(11,18,32,.08);transition:opacity .5s}
+.nav button{white-space:nowrap;border:0;border-radius:999px;padding:12px 18px;font-weight:600;font-size:14px;cursor:pointer;background:transparent}
+.nav #nextb{background:var(--ink);color:#fff}
+.nav #nextb.ready{animation:nudge 1.4s infinite}
+@keyframes nudge{50%{box-shadow:0 0 0 7px rgba(31,79,216,.18)}}
+body.cover .top,body.cover .nav{opacity:0;pointer-events:none}
+@media (max-width:860px){.dots i{width:14px}.dots i.cur{width:26px}.top{left:16px;right:16px}}
+.credit{position:fixed;z-index:3;right:12px;bottom:6px;font-size:10px;color:var(--faint)}
+.credit a{text-decoration:none}
+
+/* cover */
+.cover{grid-template-columns:1fr}
+.cover .inner{max-width:640px}
+.cover h1{font-family:var(--serif);font-weight:400;font-size:clamp(60px,9vw,140px);line-height:.95;margin:14px 0 18px;letter-spacing:-.015em}
+.cover h1 em{color:var(--blue)}
+.cover p{font-size:18px;color:var(--muted);margin:0 0 30px;max-width:460px;line-height:1.5}
+.go{position:relative;padding:18px 30px;border-radius:999px;border:0;background:var(--ink);color:#fff;font-weight:600;font-size:17px;cursor:pointer;box-shadow:0 18px 44px rgba(11,18,32,.22)}
+.go::before{content:"";position:absolute;inset:-6px;border-radius:999px;border:2px solid rgba(31,79,216,.3);animation:ring 2s infinite}
+@keyframes ring{0%{transform:scale(.96);opacity:1}100%{transform:scale(1.12);opacity:0}}
+.qlist{display:flex;flex-wrap:wrap;gap:8px;margin-top:34px;max-width:620px}
+.qlist span{font-size:12px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.8);border:1px solid var(--line);color:var(--muted)}
+
+.final{text-align:left}
+.final .big{font-family:var(--serif);font-size:clamp(80px,10vw,140px);line-height:1;color:var(--blue)}
+.links{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.links a{padding:11px 16px;border-radius:999px;background:#fff;border:1px solid var(--line);text-decoration:none;font-size:14px;font-weight:600}
+.links a:hover{border-color:var(--blue);color:var(--blue)}
+.lims{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.lim{background:var(--soft);border-radius:18px;padding:20px;opacity:0;transform:translateX(30px);transition:all .6s var(--ease)}
+.lim.show{opacity:1;transform:none}
+.lim b{display:block;font-family:var(--serif);font-weight:400;font-size:28px;line-height:1.05;margin-bottom:6px}
+.lim span{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}
+</style>
+</head>
+<body class="cover">
+<canvas id="bg"></canvas>
+<div id="stage"></div>
+<div class="top"><div class="dots" id="dots"></div><div class="score" id="score">Score 0 / 6</div></div>
+<div class="nav"><button id="backb">‹ Back</button><button id="nextb">Next question ›</button></div>
+<div class="credit">Data: <a href="https://engineering.case.edu/bearingdatacenter" target="_blank" rel="noopener">Case Western Reserve University Bearing Data Center</a></div>
+
+<script src="data.js"></script>
+<script>
+const DS = window.DS, $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const CL = ['Normal', 'Inner Race', 'Outer Race', 'Ball'];
+const NAME = { 'Normal': 'Healthy', 'Inner Race': 'Inner-ring pit', 'Outer Race': 'Outer-ring pit', 'Ball': 'Ball pit' };
+const COL = { 'Normal': '#10a37f', 'Inner Race': '#1f4fd8', 'Outer Race': '#e07b24', 'Ball': '#0b1220' };
+const CLIP = Object.fromEntries(CL.map(c => [c, Float32Array.from(DS.clips[c], v => v / 1000)]));
+const SEV = Object.fromEntries(Object.entries(DS.sev_clips).map(([k, a]) => [k, Float32Array.from(a, v => v / 1000)]));
+const rms = a => Math.sqrt(a.reduce((s, v) => s + v * v, 0) / a.length);
+const pathOf = (ys, x0, y0, w, h, lo, hi) => { let d = ''; const n = ys.length; for (let i = 0; i < n; i++) d += (i ? 'L' : 'M') + (x0 + i / (n - 1) * w).toFixed(1) + ',' + (y0 + h - (ys[i] - lo) / (hi - lo) * h).toFixed(1); return d; };
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* ---------- audio: play the real 12 kHz recordings ---------- */
+let AC = null, playing = null;
+const PEAK = Math.max(...CL.map(c => Math.max(...CLIP[c].map(Math.abs))), ...Object.values(SEV).map(a => Math.max(...a.map(Math.abs))));
+function play(arr, onTick, onEnd) {
+  AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+  if (AC.state === 'suspended') AC.resume();
+  stopAudio();
+  const loops = 2, buf = AC.createBuffer(1, arr.length * loops, 12000), ch = buf.getChannelData(0);
+  for (let l = 0; l < loops; l++) for (let i = 0; i < arr.length; i++) ch[l * arr.length + i] = arr[i] / PEAK * .9;  // shared scale: loudness stays honest
+  const src = AC.createBufferSource(); src.buffer = buf; src.connect(AC.destination);
+  const t0 = AC.currentTime; src.start();
+  playing = { src, raf: 0 };
+  const tick = () => { const k = ((AC.currentTime - t0) % 1); onTick && onTick(k); if (playing && playing.src === src) playing.raf = requestAnimationFrame(tick); };
+  tick();
+  src.onended = () => { if (playing && playing.src === src) { cancelAnimationFrame(playing.raf); playing = null; } onEnd && onEnd(); };
+}
+function stopAudio() { if (playing) { try { playing.src.stop(); } catch (e) {} cancelAnimationFrame(playing.raf); playing = null; } }
+
+/* ---------- small FFT for live spectra ---------- */
+function fftMag(x) {
+  const n = x.length, re = Float64Array.from(x), im = new Float64Array(n);
+  for (let i = 1, j = 0; i < n; i++) { let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j) { [re[i], re[j]] = [re[j], re[i]]; } }
+  for (let len = 2; len <= n; len <<= 1) {
+    const a = -2 * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a);
+    for (let i = 0; i < n; i += len) { let cr = 1, ci = 0; for (let k = 0; k < len / 2; k++) {
+      const ur = re[i + k], ui = im[i + k], vr = re[i + k + len / 2] * cr - im[i + k + len / 2] * ci, vi = re[i + k + len / 2] * ci + im[i + k + len / 2] * cr;
+      re[i + k] = ur + vr; im[i + k] = ui + vi; re[i + k + len / 2] = ur - vr; im[i + k + len / 2] = ui - vi;
+      const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } }
+  }
+  const m = new Float64Array(n / 2); for (let i = 0; i < n / 2; i++) m[i] = re[i] * re[i] + im[i] * im[i]; return m;
+}
+
+/* ---------- canvas helpers ---------- */
+function fitCanvas(cv) { const d = devicePixelRatio || 1, r = cv.getBoundingClientRect(); cv.width = Math.max(1, r.width * d); cv.height = Math.max(1, r.height * d); const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); return [c, r.width, r.height]; }
+function drawWave(cv, arr, color, opt = {}) {
+  const [c, W, H] = fitCanvas(cv); c.clearRect(0, 0, W, H);
+  const scale = opt.scale || PEAK, mid = H / 2, n = arr.length, step = n / W;
+  const cols = (x0, x1, col, a) => { c.beginPath(); for (let x = x0; x < x1; x++) { let lo = 1e9, hi = -1e9; const s = Math.floor(x * step), e = Math.floor((x + 1) * step); for (let i = s; i < e; i++) { if (arr[i] < lo) lo = arr[i]; if (arr[i] > hi) hi = arr[i]; } c.moveTo(x + .5, mid - hi / scale * mid * .95); c.lineTo(x + .5, mid - lo / scale * mid * .95); } c.strokeStyle = col; c.globalAlpha = a; c.lineWidth = 1; c.stroke(); c.globalAlpha = 1; };
+  const ph = opt.head == null ? W : opt.head * W;
+  cols(0, W, color, .2); cols(0, Math.floor(ph), color, 1);
+  if (opt.head != null) { c.fillStyle = '#0b1220'; c.fillRect(ph, 0, 1.5, H); }
+  if (opt.win) { const [a, b] = opt.win; c.fillStyle = 'rgba(31,79,216,.10)'; c.fillRect(a * W, 0, (b - a) * W, H); c.strokeStyle = '#1f4fd8'; c.lineWidth = 2; c.strokeRect(a * W + 1, 1, (b - a) * W - 2, H - 2); }
+}
+
+/* ---------- score + answer plumbing ---------- */
+let score = 0, scored = 0; const SCORED = 6;
+function setScore() { $('#score').textContent = `Score ${score} / ${SCORED}`; }
+function answer(q, verdict, html) {
+  const a = $('.answer', q.el);
+  a.innerHTML = `<div class="verdict ${verdict}">${verdict === 'ok' ? 'Correct' : verdict === 'no' ? 'Not quite' : 'Here’s why'}</div><p>${html}</p>`;
+  q.el.classList.add('answered'); q.done = true; $('#nextb').classList.add('ready');
+}
+function quiz(q, options, correct, explain, onPick) {
+  const box = $('.choices', q.el);
+  box.innerHTML = options.map((o, i) => `<button class="choice" data-i="${i}">${o}</button>`).join('');
+  box.addEventListener('click', e => {
+    const b = e.target.closest('.choice'); if (!b || q.done) return;
+    const i = +b.dataset.i, ok = i === correct;
+    $$('.choice', box).forEach((x, k) => { x.disabled = true; x.classList.add(k === correct ? 'right' : k === i ? 'wrong' : 'dim'); });
+    if (ok) score++; scored++; setScore();
+    answer(q, ok ? 'ok' : 'no', explain); onPick && onPick(i, ok);
+  });
+}
+
+/* =========================================================
+   THE QUESTIONS
+   ========================================================= */
+const F = DS.fault_hz;
+const peakOf = c => { const e = DS.env[c]; let b = 0, bi = 0; e.f.forEach((f, i) => { if (f > 50 && f < 400 && e.p[i] > b) { b = e.p[i]; bi = i; } }); return e.f[bi]; };
+const Q = [];
+
+/* 1 · listen */
+Q.push({ q: 'What does a damaged bearing <em>sound</em> like?', hint: 'Tap each one to listen. Sound on.',
+  right: `<div class="panel"><canvas class="scope" id="scope1"></canvas><div class="cap" id="cap1">Real drive-end vibration, played at its true 12,000 samples per second.</div></div>`,
+  left: `<div class="players" id="pl1">${CL.map(c => `<button class="play" data-c="${c}"><i style="background:${COL[c]}">▶</i><div><b>${NAME[c]}</b><span>1 s · 0 HP</span></div></button>`).join('')}</div>`,
+  init(q) {
+    const heard = new Set(), cv = $('#scope1');
+    const show = (c, head) => drawWave(cv, CLIP[c], COL[c], { head });
+    show('Outer Race');
+    $('#pl1').addEventListener('click', e => {
+      const b = e.target.closest('.play'); if (!b) return; const c = b.dataset.c;
+      $$('.play', q.el).forEach(x => x.classList.toggle('on', x === b));
+      $('#cap1').textContent = `${NAME[c]} · RMS ${rms(CLIP[c]).toFixed(2)} · same volume scale for all four`;
+      play(CLIP[c], k => show(c, k), () => { b.classList.remove('on'); show(c); });
+      b.classList.add('heard'); heard.add(c);
+      if (heard.size >= 2 && !q.done) answer(q, 'info', `Healthy is a soft hum. Damage turns it into <b>a rhythm of clicks</b>: every click is a ball rolling over the pit. The outer-ring pit clicks about <b>${Math.round(F.BPFO)} times a second</b>.`);
+    });
+  }, leave() { stopAudio(); } });
+
+/* 2 · spot the healthy one */
+Q.push({ q: 'Can you spot the <em>healthy</em> bearing?', hint: 'One of these is undamaged. Tap it.', scoredQ: true,
+  right: `<div class="myst" id="myst"></div>`,
+  init(q) {
+    const order = shuffle(CL), box = $('#myst');
+    box.innerHTML = order.map((c, i) => `<button class="mcard" data-c="${c}"><div class="t"><span>Signal ${'ABCD'[i]}</span><span class="reveal"></span></div><canvas class="scope" style="height:110px"></canvas></button>`).join('');
+    requestAnimationFrame(() => $$('.mcard', box).forEach(m => drawWave($('canvas', m), CLIP[m.dataset.c].subarray(0, 2400), '#0b1220')));
+    box.addEventListener('click', e => {
+      const m = e.target.closest('.mcard'); if (!m || q.done) return;
+      const ok = m.dataset.c === 'Normal'; if (ok) score++; scored++; setScore();
+      $$('.mcard', box).forEach(x => { x.disabled = true; $('.reveal', x).textContent = NAME[x.dataset.c]; $('.reveal', x).style.color = COL[x.dataset.c]; drawWave($('canvas', x), CLIP[x.dataset.c].subarray(0, 2400), COL[x.dataset.c]);
+        if (x.dataset.c === 'Normal') x.classList.add('right'); else if (x === m) x.classList.add('wrong'); });
+      answer(q, ok ? 'ok' : 'no', `Healthy is <b>small and smooth</b>: about ${(rms(CLIP['Inner Race']) / rms(CLIP.Normal)).toFixed(0)}× quieter than the inner-ring pit, with no sharp spikes. Spikes mean impacts, and impacts mean damage.`);
+    });
+  } });
+
+/* 3 · where can it break */
+Q.push({ q: 'Where on a bearing can the <em>damage</em> be?', hint: 'Tap the three glowing spots.',
+  right: `<div class="panel"><svg class="v" id="b3" viewBox="0 0 640 330"></svg><div id="info3" class="cap">Tap a spot to see its fingerprint.</div></div>`,
+  left: `<div class="found" id="found3">0 of 3 found</div>`,
+  init(q) {
+    const s = $('#b3'), c = 165, cy = 165, ro = 150, ri = 112, ii = 78, ib = 48, pr = (ri + ii) / 2, br = 15;
+    let h = `<circle cx="${c}" cy="${cy}" r="${ro}" fill="#e9edf5"/><circle cx="${c}" cy="${cy}" r="${ri}" fill="#fff"/><circle cx="${c}" cy="${cy}" r="${ii}" fill="#e3e8f2"/><circle cx="${c}" cy="${cy}" r="${ib}" fill="#f8f9fb" stroke="#d6dce8"/>`;
+    for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 - Math.PI / 2; h += `<circle cx="${c + Math.cos(a) * pr}" cy="${cy + Math.sin(a) * pr}" r="${br}" fill="#cfd6e3" stroke="#b5bfd0"/>`; }
+    const spots = [['Inner Race', c + ii - 6, cy, 'inner ring'], ['Outer Race', c, cy + ri + 6, 'outer ring · 6 o’clock'], ['Ball', c, cy - pr, 'a ball']];
+    spots.forEach(([k, x, y]) => h += `<g class="spot" data-c="${k}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="20" fill="${COL[k]}" opacity=".15"><animate attributeName="r" values="12;24;12" dur="1.8s" repeatCount="indefinite"/></circle><circle cx="${x}" cy="${y}" r="8" fill="${COL[k]}"/></g>`);
+    h += `<g id="env3" transform="translate(350,40)"></g>`;
+    s.innerHTML = h;
+    const found = new Set();
+    s.addEventListener('click', e => {
+      const g = e.target.closest('.spot'); if (!g) return; const k = g.dataset.c; found.add(k);
+      const env = DS.env[k], ys = env.f.map((f, i) => f >= 20 ? env.p[i] : null).filter(v => v != null);
+      const hz = { 'Inner Race': F.BPFI, 'Outer Race': F.BPFO, 'Ball': F.BSF }[k], X = f => (f - 20) / 480 * 270;
+      $('#env3').innerHTML = `<text class="lb" x="0" y="0" fill="${COL[k]}">${spots.find(s => s[0] === k)[3]}</text><text class="ax" x="0" y="18">its repeating beat (envelope spectrum)</text>
+        <line x1="${X(hz)}" x2="${X(hz)}" y1="34" y2="214" stroke="${COL[k]}" stroke-dasharray="3 4" opacity=".6"/>
+        <path d="${pathOf(ys, 0, 34, 270, 180, 0, 1)}" fill="none" stroke="${COL[k]}" stroke-width="1.6"/>
+        ${[20, 200, 400].map(f => `<text class="ax" x="${X(f)}" y="236" text-anchor="middle">${f} Hz</text>`).join('')}
+        <text class="lb" x="0" y="268">${k === 'Ball' ? 'No single clean peak: ball faults are faint here.' : `Peak at ${Math.round(peakOf(k))} Hz · theory says ${Math.round(hz)} Hz`}</text>`;
+      $('#found3').textContent = `${found.size} of 3 found`;
+      $('#info3').textContent = 'Dashed line = where physics says the beat should be.';
+      if (found.size === 3 && !q.done) answer(q, 'info', `Three places: the <b>inner ring</b>, the <b>outer ring</b>, or a <b>ball</b>. Each pit gets hit at its own rate, so each leaves its own beat in the vibration. That beat is the fingerprint a model can learn.`);
+    });
+  } });
+
+/* 4 · why its own rhythm (live physics) */
+Q.push({ q: 'Why does each fault have its own <em>rhythm</em>?', hint: 'Pick a pit, then drag the motor speed.',
+  right: `<div class="panel"><canvas id="cv4" style="width:100%;height:300px;display:block"></canvas>
+    <div class="readout"><div><b id="rpm4">1797</b>shaft rpm</div><div><b id="hz4">162</b>hits per second</div><div><b id="per4">5.42</b>hits per turn</div></div>
+    <input type="range" id="sl4" min="600" max="3600" step="1" value="1797" aria-label="Motor speed"><div class="cap">Animation in slow motion. The real recordings ran at about 1,797 rpm.</div></div>`,
+  left: `<div class="chips" id="ch4">${[['Inner Race', 'Inner ring'], ['Outer Race', 'Outer ring'], ['Ball', 'Ball']].map(([k, t], i) => `<button class="chip ${i ? '' : 'on'}" data-c="${k}">${t}</button>`).join('')}</div>`,
+  init(q) {
+    const FACT = { 'Inner Race': 5.4152, 'Outer Race': 3.5848, 'Ball': 4.7135 };
+    let kind = 'Inner Race', rpm = 1797, t = 0, last = performance.now(), flash = 0, prevNear = false, moved = 0;
+    const cv = $('#cv4'); let ctx, W, H;
+    const resize = () => { [ctx, W, H] = fitCanvas(cv); }; resize(); addEventListener('resize', resize);
+    const upd = () => { $('#rpm4').textContent = rpm; $('#hz4').textContent = Math.round(FACT[kind] * rpm / 60); $('#per4').textContent = FACT[kind].toFixed(2); };
+    const maybeAnswer = () => { if (++moved >= 2 && !q.done) answer(q, 'info', `<b>Geometry × speed.</b> With 9 balls, the outer-ring pit is hit 3.58 times per turn and the inner-ring pit 5.42 times. At 1,797 rpm that is <b>${Math.round(F.BPFO)}</b> and <b>${Math.round(F.BPFI)}</b> hits per second, and the real recordings beat at <b>${Math.round(peakOf('Outer Race'))}</b> and <b>${Math.round(peakOf('Inner Race'))}</b>.`); };
+    $('#ch4').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; kind = b.dataset.c; $$('.chip', $('#ch4')).forEach(x => x.classList.toggle('on', x === b)); upd(); maybeAnswer(); });
+    $('#sl4').addEventListener('input', e => { rpm = +e.target.value; upd(); }); $('#sl4').addEventListener('change', maybeAnswer);
+    upd();
+    const frame = now => {
+      if (!q.el.classList.contains('active')) { q.raf = null; return; }
+      const dt = Math.min(.05, (now - last) / 1000); last = now; t += dt;
+      const fr = rpm / 60 / 70;                        // slow motion
+      const cx = W / 2, cy = H / 2, R = Math.min(W, H) * .46, ri = R * .76, ii = R * .52, pr = (ri + ii) / 2, br = (ri - ii) * .4;
+      ctx.clearRect(0, 0, W, H);
+      const shaft = (q.sh = (q.sh || 0) + 2 * Math.PI * fr * dt), cage = (q.cg = (q.cg || 0) + 2 * Math.PI * fr * .3983 * dt);
+      ctx.fillStyle = '#e9edf5'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, ri, 0, 7); ctx.fill();
+      ctx.fillStyle = '#e3e8f2'; ctx.beginPath(); ctx.arc(cx, cy, ii, 0, 7); ctx.fill();
+      ctx.fillStyle = '#f8f9fb'; ctx.beginPath(); ctx.arc(cx, cy, ii * .62, 0, 7); ctx.fill();
+      // inner-ring marks rotate with the shaft
+      for (let k = 0; k < 6; k++) { const a = shaft + k * Math.PI / 3; ctx.fillStyle = 'rgba(11,18,32,.18)'; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * ii * .82, cy + Math.sin(a) * ii * .82, 3, 0, 7); ctx.fill(); }
+      // defect position
+      let dAng = null; const target = kind === 'Outer Race' ? Math.PI / 2 : kind === 'Inner Race' ? shaft + Math.PI / 2 : null;
+      let near = false;
+      const balls = []; for (let i = 0; i < 9; i++) balls.push(cage + i * 2 * Math.PI / 9);
+      if (target != null) {
+        const d = Math.min(...balls.map(a => Math.abs(Math.atan2(Math.sin(a - target), Math.cos(a - target)))));
+        near = d < .06;
+      } else {
+        q.spin = (q.spin || 0) + 2 * Math.PI * fr * 2.357 * dt;   // ball spin
+        near = Math.abs(Math.cos(q.spin)) > .995;
+      }
+      if (near && !prevNear) flash = 1; prevNear = near; flash *= .9;
+      balls.forEach((a, i) => {
+        const x = cx + Math.cos(a) * pr, y = cy + Math.sin(a) * pr;
+        ctx.fillStyle = '#cfd6e3'; ctx.strokeStyle = '#b5bfd0'; ctx.beginPath(); ctx.arc(x, y, br, 0, 7); ctx.fill(); ctx.stroke();
+        if (kind === 'Ball' && i === 0) { const s = q.spin || 0; ctx.fillStyle = COL.Ball; ctx.beginPath(); ctx.arc(x + Math.cos(s) * br * .7, y + Math.sin(s) * br * .7, 4, 0, 7); ctx.fill(); }
+      });
+      if (target != null) {
+        const rr = kind === 'Outer Race' ? ri + 2 : ii - 2, x = cx + Math.cos(target) * rr, y = cy + Math.sin(target) * rr;
+        ctx.fillStyle = COL[kind]; ctx.beginPath(); ctx.arc(x, y, 6, 0, 7); ctx.fill();
+        if (flash > .05) { ctx.strokeStyle = `rgba(31,79,216,${flash})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 10 + (1 - flash) * 30, 0, 7); ctx.stroke(); }
+      } else if (flash > .05) { const x = cx + Math.cos(cage) * pr, y = cy + Math.sin(cage) * pr; ctx.strokeStyle = `rgba(11,18,32,${flash})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, br + 4 + (1 - flash) * 24, 0, 7); ctx.stroke(); }
+      // impact trace scrolling to the right of the bearing
+      q.trace = q.trace || new Array(120).fill(0); q.trace.push(flash); q.trace.shift();
+      q.raf = requestAnimationFrame(frame);
+    };
+    q.enter = () => { last = performance.now(); resize(); if (!q.raf) q.raf = requestAnimationFrame(frame); };
+  } });
+
+/* 5 · bigger = louder? */
+Q.push({ q: 'Is a bigger pit always <em>louder</em>?', hint: 'Listen if you like, then pick the quietest.', scoredQ: true,
+  right: `<div class="panel"><div id="sev5"></div><div class="cap">Inner-ring pits, 0 HP, all on one volume scale.</div></div>`,
+  left: `<div class="choices"></div>`,
+  init(q) {
+    const keys = ['0.007', '0.014', '0.021'], mm = ['0.18 mm', '0.36 mm', '0.53 mm'], R = keys.map(k => rms(SEV[k])), maxR = Math.max(...R);
+    $('#sev5').innerHTML = keys.map((k, i) => `<div style="display:grid;grid-template-columns:120px 1fr 90px;gap:12px;align-items:center;margin:8px 0">
+      <button class="play" data-k="${k}" style="padding:8px 10px"><i style="background:var(--ir);width:30px;height:30px">▶</i><div><b>${mm[i]}</b></div></button>
+      <canvas class="scope" style="height:70px"></canvas><div class="bar5" style="height:16px;border-radius:8px;background:var(--soft);overflow:hidden"><div style="height:100%;width:0;background:var(--ir);border-radius:8px;transition:width 1.2s var(--ease)"></div></div></div>`).join('');
+    const rows = $$('#sev5 > div');
+    const drawAll = () => rows.forEach((r, i) => drawWave($('canvas', r), SEV[keys[i]], '#1f4fd8'));
+    requestAnimationFrame(drawAll); q.enter = drawAll;
+    $('#sev5').addEventListener('click', e => { const b = e.target.closest('.play'); if (!b) return; const i = keys.indexOf(b.dataset.k), cv = $('canvas', rows[i]);
+      play(SEV[b.dataset.k], k => drawWave(cv, SEV[keys[i]], '#1f4fd8', { head: k }), () => drawWave(cv, SEV[keys[i]], '#1f4fd8')); });
+    quiz(q, mm, 1, `Surprise: the <b>middle pit is quietest</b> (RMS ${R[1].toFixed(2)} vs ${R[0].toFixed(2)} and ${R[2].toFixed(2)}). Loudness depends on how the pit meets the ball, not just its size, so a model can’t simply measure volume. It has to learn the <b>pattern</b>.`,
+      () => rows.forEach((r, i) => { const f = $('.bar5 div', r); f.style.width = (R[i] / maxR * 100) + '%'; f.style.background = i === 1 ? 'var(--good)' : 'var(--ir)';
+        f.parentNode.insertAdjacentHTML('afterend', `<div style="grid-column:3;font-size:12px;font-weight:700;margin-top:-6px">RMS ${R[i].toFixed(2)}</div>`); }));
+  } });
+
+/* 6 · how big */
+Q.push({ q: 'How wide is the <em>biggest</em> pit?', hint: 'Drag to guess, then lock it in.', scoredQ: true,
+  right: `<div class="panel"><svg class="v" id="sz6" viewBox="0 0 640 310"></svg><div class="cap" id="cap6">Everything here shares one scale. The real pit appears when you lock in.</div></div>`,
+  left: `<div style="margin-bottom:6px;font-size:14px;color:var(--muted)">Your guess</div><div style="font-family:var(--serif);font-size:56px;line-height:1" id="g6">1.0 mm</div>
+    <input type="range" id="sl6" min="-2" max="1" step=".01" value="0" aria-label="Guess in millimetres"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-bottom:16px"><span>0.01 mm</span><span>10 mm</span></div>
+    <button class="btn" id="lock6">Lock in my guess</button>`,
+  init(q) {
+    const real = .53, hair = .07; let g = 1;
+    const fmt = v => v < .1 ? v.toFixed(2) : v < 1 ? v.toFixed(2) : v.toFixed(1);
+    // One shared scale for everything on screen: the guess, a hair, a 1 mm ruler, and (after lock-in) the real pit.
+    const draw = (reveal) => {
+      const items = [['your guess', g, '#7d94ee'], ...(reveal ? [['the biggest pit', real, '#e07b24']] : []), ['a human hair', hair, '#b9c2d3']];
+      const px = 200 / Math.max(g, real, 1);                 // pixels per mm, same for every item
+      const cy = 130; let x = 16, h = '';
+      items.forEach(([t, v, c]) => {
+        const r = v * px / 2, slot = Math.max(r, 46), cx = x + slot; x = cx + slot + 18;
+        h += r < 1 ? `<circle cx="${cx}" cy="${cy}" r="${Math.max(r, .6)}" fill="${c}"/><circle cx="${cx}" cy="${cy}" r="9" fill="none" stroke="${c}" stroke-dasharray="2 3"/>`
+                   : `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}" style="transition:r .25s"/>`;
+        h += `<text class="lb" x="${cx}" y="${cy + Math.max(r, 12) + 24}" text-anchor="middle">${fmt(v)} mm</text><text class="ax" x="${cx}" y="${cy + Math.max(r, 12) + 41}" text-anchor="middle">${t}</text>`;
+      });
+      const L = px;                                          // 1 mm ruler at the same scale
+      h += `<g transform="translate(16,298)"><line x1="0" x2="${L}" y1="0" y2="0" stroke="#0b1220" stroke-width="2"/><line x1="0" x2="0" y1="-6" y2="6" stroke="#0b1220" stroke-width="2"/><line x1="${L}" x2="${L}" y1="-6" y2="6" stroke="#0b1220" stroke-width="2"/><text class="ax" x="${L + 10}" y="4">1 mm</text></g>`;
+      $('#sz6').innerHTML = h;
+    };
+    draw(false);
+    $('#sl6').addEventListener('input', e => { g = Math.pow(10, +e.target.value); $('#g6').textContent = fmt(g) + ' mm'; if (!q.done) draw(false); });
+    $('#lock6').addEventListener('click', () => {
+      if (q.done) return; const ok = g >= real / 2 && g <= real * 2; if (ok) score++; scored++; setScore();
+      $('#sl6').disabled = true; $('#lock6').disabled = true; draw(true); $('#cap6').textContent = 'All drawn at the same scale.';
+      answer(q, ok ? 'ok' : 'no', `The biggest pit is <b>0.53 mm</b> (0.021 inch): about seven human hairs wide. The smallest is 0.18 mm. They were spark-machined on purpose, so the damage is <b>tiny and precise</b>. ${ok ? 'Your guess was within a factor of two.' : 'Correct counts within a factor of two.'}`);
+    });
+  } });
+
+/* 7 · how a computer reads it */
+Q.push({ q: 'How does a computer <em>read</em> vibration?', hint: 'Drag the blue window along the signal.',
+  right: `<div class="panel"><div class="chips" id="ch7">${CL.map((c, i) => `<button class="chip ${i === 1 ? 'on' : ''}" data-c="${c}">${NAME[c]}</button>`).join('')}</div>
+    <canvas class="scope" id="w7" style="height:120px;cursor:ew-resize;touch-action:none"></canvas>
+    <input type="range" id="sl7" min="0" max="${12000 - 2048}" step="16" value="2000" aria-label="Window position">
+    <svg class="v" id="sp7" viewBox="0 0 640 170"></svg>
+    <div class="readout"><div><b id="r7">0.29</b>loudness (RMS)</div><div><b id="k7">3.1</b>spikiness (kurtosis)</div><div><b>0.17 s</b>one window</div></div></div>`,
+  init(q) {
+    let cls = 'Inner Race', pos = 2000, moved = 0; const cv = $('#w7');
+    const bandsAt = (a, p) => { const w = a.subarray(p, p + 2048), mean = w.reduce((s, v) => s + v, 0) / w.length, x = Array.from(w, (v, i) => (v - mean) * (.5 - .5 * Math.cos(2 * Math.PI * i / 2047)));
+      const m = fftMag(x), b = []; for (let k = 0; k < 64; k++) { let s = 0; for (let i = k * 16; i < k * 16 + 16; i++) s += m[i]; b.push(Math.log10(s + 1e-9)); } return b; };
+    // one fixed scale for every class and position, so loudness differences stay visible
+    const all = CL.flatMap(c => [0, 4000, 8000].flatMap(p => bandsAt(CLIP[c], p)));
+    const lo = Math.min(...all), hi = Math.max(...all);
+    const upd = () => {
+      const a = CLIP[cls], w = a.subarray(pos, pos + 2048), mean = w.reduce((s, v) => s + v, 0) / w.length;
+      drawWave(cv, a, COL[cls], { win: [pos / a.length, (pos + 2048) / a.length] });
+      const bands = bandsAt(a, pos), bw = 640 / 64;
+      $('#sp7').innerHTML = bands.map((v, i) => { const h = Math.max(0, (v - lo) / (hi - lo || 1)) * 130 + 4; return `<rect x="${i * bw + 1}" y="${140 - h}" width="${bw - 2}" height="${h}" rx="2" fill="${COL[cls]}" opacity=".85"/>`; }).join('')
+        + `<text class="ax" x="0" y="160">low pitch</text><text class="ax" x="640" y="160" text-anchor="end">6 kHz</text><text class="ax" x="320" y="160" text-anchor="middle">64 pitch bands → 64 of the 100 numbers</text>`;
+      const r = Math.sqrt(w.reduce((s, v) => s + (v - mean) ** 2, 0) / w.length), k = w.reduce((s, v) => s + ((v - mean) / r) ** 4, 0) / w.length;
+      $('#r7').textContent = r.toFixed(2); $('#k7').textContent = k.toFixed(1);
+    };
+    const hit = () => { if (++moved > 6 && !q.done) answer(q, 'info', `It never hears the whole recording. It reads <b>0.17-second slices</b> (2,048 samples) and turns each into <b>100 numbers</b>: 64 for how energy spreads across pitches, 32 for the click rhythm, and 4 for loudness and spikiness. Try the healthy one: low and flat.`); };
+    $('#sl7').addEventListener('input', e => { pos = +e.target.value; upd(); hit(); });
+    let drag = false; const setFrom = e => { const r = cv.getBoundingClientRect(); pos = Math.max(0, Math.min(12000 - 2048, Math.round(((e.clientX - r.left) / r.width) * 12000 - 1024))); $('#sl7').value = pos; upd(); hit(); };
+    cv.addEventListener('pointerdown', e => { drag = true; cv.setPointerCapture(e.pointerId); setFrom(e); });
+    cv.addEventListener('pointermove', e => drag && setFrom(e)); cv.addEventListener('pointerup', () => drag = false);
+    $('#ch7').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; cls = b.dataset.c; $$('.chip', $('#ch7')).forEach(x => x.classList.toggle('on', x === b)); upd(); });
+    q.enter = upd; requestAnimationFrame(upd);
+  } });
+
+/* 8 · why not shuffle */
+Q.push({ q: 'Why not just <em>shuffle</em> the slices for testing?', hint: 'Make a prediction.', scoredQ: true,
+  right: `<div class="panel"><div class="chips" id="ch8"><button class="chip on" data-m="random">Shuffle randomly</button><button class="chip" data-m="time">Split by time</button></div>
+    <svg class="v" id="t8" viewBox="0 0 640 200"></svg><div class="readout"><div><b id="lk8">0</b>test slices that overlap a training slice</div></div></div>`,
+  left: `<div class="choices"></div>`,
+  init(q) {
+    const N = 22, seedSplit = shuffle(Array.from({ length: N }, (_, i) => i < 13 ? 'train' : i < 17 ? 'val' : 'test'));
+    const C = { train: '#1f4fd8', val: '#7d94ee', test: '#0b1220' };
+    const draw = mode => {
+      const lab = mode === 'random' ? seedSplit : Array.from({ length: N }, (_, i) => i < 12 ? 'train' : i < 16 ? 'val' : 'test');
+      const w = 640 / (N + 1) * 2, step = w / 2; let h = '', leaks = 0;
+      lab.forEach((l, i) => {
+        const x = i * step, y = i % 2 ? 70 : 20;
+        const leak = l === 'test' && ((i > 0 && lab[i - 1] === 'train') || (i < N - 1 && lab[i + 1] === 'train')) && mode === 'random';
+        if (leak) leaks++;
+        h += `<rect x="${x + 1}" y="${y}" width="${w - 2}" height="40" rx="8" fill="${C[l]}" opacity="${l === 'test' ? 1 : .85}" ${leak ? 'stroke="#e5484d" stroke-width="4"' : ''}/>`;
+      });
+      if (mode === 'time') h += [12, 16].map(i => `<line x1="${i * step}" x2="${i * step}" y1="10" y2="122" stroke="#e07b24" stroke-width="2" stroke-dasharray="3 3"/>`).join('');
+      h += `<text class="ax" x="0" y="150">start of recording</text><text class="ax" x="640" y="150" text-anchor="end">end</text>`;
+      h += `<g transform="translate(0,170)">${[['train', 'train'], ['val', 'validation'], ['test', 'test']].map(([k, t], i) => `<rect x="${i * 120}" y="0" width="12" height="12" rx="3" fill="${C[k]}"/><text class="ax" x="${i * 120 + 18}" y="11">${t}</text>`).join('')}<rect x="360" y="0" width="12" height="12" rx="3" fill="none" stroke="#e5484d" stroke-width="2"/><text class="ax" x="378" y="11">leak</text></g>`;
+      $('#t8').innerHTML = h; $('#lk8').textContent = leaks;
+    };
+    draw('random');
+    $('#ch8').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; $$('.chip', $('#ch8')).forEach(x => x.classList.toggle('on', x === b)); draw(b.dataset.m); });
+    quiz(q, ['Scores look better than they really are', 'Scores get worse', 'Nothing changes'], 0,
+      `Slices overlap by half. Shuffle them and a test slice <b>shares half its samples with a training slice</b>: the model has partly seen the answer. Splitting by time, with a gap at each boundary, means <b>no leaks</b>. Flip the toggle to see it.`);
+  } });
+
+/* 9 · how much data */
+Q.push({ q: 'How much vibration is in the <em>whole</em> dataset?', hint: 'Take a guess.', scoredQ: true,
+  right: `<div class="panel"><svg class="v" id="d9" viewBox="0 0 640 260"></svg><div class="cap" id="cap9">40 recordings. Bar height = length.</div></div>`,
+  left: `<div class="choices"></div>`,
+  init(q) {
+    const files = DS.files.slice().sort((a, b) => a.load - b.load || a.cls - b.cls || (a.dia || 0) - (b.dia || 0));
+    const total = files.reduce((s, f) => s + f.sec, 0), mb = files.reduce((s, f) => s + f.mb, 0), bw = 640 / files.length;
+    const draw = rev => { $('#d9').innerHTML = files.map((f, i) => { const h = rev ? f.sec / 10.5 * 180 : 30; return `<rect x="${i * bw + 2}" y="${200 - h}" width="${bw - 4}" height="${h}" rx="3" fill="${COL[CL[f.cls]]}" style="transition:all .8s ${i * .02}s var(--ease)"/>`; }).join('')
+      + (rev ? `<text x="0" y="248" font-family="Instrument Serif" font-size="30" fill="#0b1220">${(total / 60).toFixed(1)} minutes · ${Math.round(mb)} MB</text>` : `<text class="ax" x="0" y="240">?</text>`); };
+    draw(false);
+    quiz(q, ['About 7 minutes', 'About 7 hours', 'About 7 days'], 0,
+      `Just <b>${(total / 60).toFixed(1)} minutes</b> in total: about 10 seconds per recording. Small, clean and precise, which makes it great for learning but <b>far from a year of factory data</b>.`, () => draw(true));
+  } });
+
+/* 10 · factory */
+Q.push({ q: 'Does this prove it will work in a <em>real factory</em>?', hint: 'Last one.', scoredQ: true,
+  right: `<div class="panel"><div class="lims" id="l10">${[['One rig', 'one motor, one lab'], ['Seeded pits', 'machined, not natural wear'], ['Short clips', '≈10 s each'], ['Steady speed', 'no start-ups or shocks']].map(([b, s]) => `<div class="lim"><b>${b}</b><span>${s}</span></div>`).join('')}</div></div>`,
+  left: `<div class="choices"></div>`,
+  init(q) {
+    quiz(q, ['Yes', 'Not yet'], 1, `It proves the <b>method</b> works on clean lab data. A factory has different machines, natural wear, noise and changing speeds. The next step is a <b>real pilot</b>.`,
+      () => $$('#l10 .lim').forEach((l, i) => setTimeout(() => l.classList.add('show'), 150 + i * 160)));
+  } });
+
+/* =========================================================
+   BUILD + NAVIGATION
+   ========================================================= */
+const S = [{ cover: true }, ...Q, { final: true }];
+const LAST = S.length - 1; let cur = 0;
+function build() {
+  S.forEach((q, i) => {
+    const el = document.createElement('section'); el.className = 'q' + (q.cover ? ' cover' : '');
+    if (q.cover) el.innerHTML = `<div class="inner"><div class="num"><b>The CWRU bearing data</b> · interactive</div><h1>Ask the <em>vibration</em></h1>
+        <p>Ten questions people ask about bearing data, answered by listening, guessing and dragging the real recordings.</p>
+        <button class="go" id="start">Start · 10 questions</button>
+        <div class="qlist">${Q.map(x => `<span>${x.q.replace(/<[^>]+>/g, '')}</span>`).join('')}</div></div>`;
+    else if (q.final) el.innerHTML = `<div class="final"><div class="num"><b>Done</b></div><h2>You scored</h2><div class="big" id="fs">0 / ${SCORED}</div>
+        <p style="color:var(--muted);max-width:420px;line-height:1.5">Now you know what the Bearing Collective model is learning from: forty short, clean lab recordings with very particular rhythms.</p>
+        <div class="links"><a href="https://qwertykeypadapple.github.io/bearing-collective/" target="_blank" rel="noopener">See how plants learn together ↗</a><a href="https://engineering.case.edu/bearingdatacenter" target="_blank" rel="noopener">CWRU data ↗</a><a href="#" id="again">↺ Start again</a></div></div>
+        <div class="right"><div class="panel"><svg class="v" viewBox="0 0 640 220">${CL.map((c, i) => `<path d="${pathOf(Array.from(CLIP[c].subarray(0, 900)), 0, 10 + i * 52, 640, 44, -PEAK * .8, PEAK * .8)}" fill="none" stroke="${COL[c]}" stroke-width="1.2"/>`).join('')}</svg></div></div>`;
+    else el.innerHTML = `<div class="left"><div class="num"><b>Question ${String(i).padStart(2, '0')}</b> / ${Q.length}</div><h2>${q.q}</h2><div class="hint">${q.hint}</div>${q.left || '<div class="choices"></div>'}<div class="answer"></div></div><div class="right">${q.right}</div>`;
+    $('#stage').appendChild(el); q.el = el;
+  });
+  $('#dots').innerHTML = Q.map(() => '<i></i>').join('');
+  Q.forEach(q => q.init(q));
+  $('#start').onclick = () => go(1);
+  $('#again').onclick = e => { e.preventDefault(); location.reload(); };
+}
+function go(i) {
+  i = Math.max(0, Math.min(LAST, i));
+  const old = S[cur]; if (old && old.leave) old.leave(); stopAudio();
+  cur = i;
+  S.forEach((q, k) => { q.el.classList.toggle('active', k === i); q.el.classList.toggle('past', k < i); });
+  document.body.classList.toggle('cover', i === 0);
+  $$('#dots i').forEach((d, k) => { d.className = k + 1 < i ? 'done' : k + 1 === i ? 'cur' : ''; if (S[k + 1].done && k + 1 !== i) d.className = 'done'; });
+  $('#nextb').textContent = i === LAST - 1 ? 'See my score ›' : 'Next question ›';
+  $('#nextb').classList.toggle('ready', !!S[i].done);
+  $('#nextb').style.display = i === LAST ? 'none' : '';
+  if (S[i].final) $('#fs').textContent = `${score} / ${SCORED}`;
+  if (S[i].enter) requestAnimationFrame(() => S[i].enter());
+}
+$('#nextb').onclick = () => go(cur + 1);
+$('#backb').onclick = () => go(cur - 1);
+addEventListener('keydown', e => { if (e.target.closest('input')) return; if (e.key === 'ArrowRight') go(cur + 1); else if (e.key === 'ArrowLeft' && cur > 0) go(cur - 1); });
+
+/* ---------- background: real vibration drifting sideways ---------- */
+const cv = $('#bg'), cx = cv.getContext('2d');
+function sizeBg() { const d = devicePixelRatio || 1; cv.width = innerWidth * d; cv.height = innerHeight * d; cx.setTransform(d, 0, 0, d, 0, 0); }
+function bg(t) {
+  const W = innerWidth, H = innerHeight, cover = cur === 0 || cur === LAST;
+  cx.clearRect(0, 0, W, H);
+  if (cover) {
+    CL.forEach((c, i) => {
+      const wide = W > 860, sig = CLIP[c], n = sig.length, off = Math.floor(t / 1000 * 900) % n, y0 = wide ? H * (.2 + i * .18) : H * (.64 + i * .07), amp = H * (wide ? .05 : .025);
+      cx.beginPath(); for (let x = 0; x <= W; x += 2) { const v = sig[(off + Math.floor(x * 2.2)) % n] / PEAK; x ? cx.lineTo(x, y0 + v * amp) : cx.moveTo(x, y0 + v * amp); }
+      cx.strokeStyle = COL[c]; cx.globalAlpha = .22; cx.lineWidth = 1.3; cx.stroke(); cx.globalAlpha = 1;
+    });
+    if (W > 860) {   // keep the headline clean
+      const g = cx.createLinearGradient(0, 0, W * .62, 0);
+      g.addColorStop(0, 'rgba(248,249,251,1)'); g.addColorStop(.7, 'rgba(248,249,251,.85)'); g.addColorStop(1, 'rgba(248,249,251,0)');
+      cx.fillStyle = g; cx.fillRect(0, 0, W * .62, H);
+    }
+  }
+  requestAnimationFrame(bg);
+}
+addEventListener('resize', () => { sizeBg(); if (S[cur].enter) S[cur].enter(); });
+
+build(); sizeBg(); go(0); requestAnimationFrame(bg);
+</script>
+</body>
+</html>
